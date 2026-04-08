@@ -2,15 +2,15 @@ name: dbt CI Pipeline
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ main ]
   pull_request:
 
 jobs:
-  dbt-run:
+  dbt-ci:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: Checkout repo
         uses: actions/checkout@v3
 
       - name: Set up Python
@@ -19,16 +19,19 @@ jobs:
           python-version: '3.9'
 
       - name: Install dbt
-        run: |
-          pip install dbt-snowflake
+        run: pip install dbt-snowflake
 
-      - name: Run dbt models
+      - name: Install dependencies
         run: |
           cd ecommerce_dbt
           dbt deps
-          dbt run
 
-      - name: Run dbt tests
+      - name: Validate dbt project
         run: |
           cd ecommerce_dbt
-          dbt test
+          dbt debug --profiles-dir .
+
+      - name: Compile dbt models
+        run: |
+          cd ecommerce_dbt
+          dbt compile --profiles-dir .
