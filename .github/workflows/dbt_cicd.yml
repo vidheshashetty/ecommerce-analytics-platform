@@ -1,4 +1,4 @@
-name: dbt CI Pipeline
+name: dbt-ci
 
 on:
   push:
@@ -10,23 +10,43 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo
+      - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Set up Python
+      - name: Setup Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.9'
+          python-version: "3.10"
 
       - name: Install dbt
-        run: pip install dbt-snowflake
-
-      - name: Install dependencies
         run: |
-          cd ecommerce_dbt
-          dbt deps
+          pip install --upgrade pip
+          pip install dbt-snowflake
+
+      - name: Setup dbt profile
+        run: |
+          mkdir -p ~/.dbt
+          cat <<EOF > ~/.dbt/profiles.yml
+          ecommerce_dbt:
+            target: dev
+            outputs:
+              dev:
+                type: snowflake
+                account: dummy_account
+                user: dummy_user
+                password: dummy_password
+                role: dummy_role
+                database: dummy_db
+                warehouse: dummy_wh
+                schema: dummy_schema
+          EOF
+
+      - name: Debug project structure
+        run: |
+          ls -R
 
       - name: Compile dbt models
         run: |
           cd ecommerce_dbt
-          dbt compile --profiles-dir .
+          dbt deps
+          dbt compile
