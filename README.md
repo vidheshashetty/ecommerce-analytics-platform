@@ -1,28 +1,53 @@
-# End-to-End E-Commerce Data Engineering Pipeline
+# End-to-End E-Commerce Data Engineering Pipeline (Scalable Architecture)
 
 ## Business Problem
 
-Leadership teams often track KPIs like revenue, orders, and conversion rates using spreadsheets.  
-Different teams calculate metrics differently, leading to inconsistent reporting.
+Leadership teams rely on KPIs such as revenue, orders, and conversion rates.
+However, inconsistent data processing across teams leads to unreliable reporting.
 
-This project builds a centralized analytics pipeline that:
+This project builds a scalable and centralized analytics pipeline that:
 
-• Ingests raw ecommerce data  
-• Cleans and models the data  
-• Calculates trusted business metrics  
-• Provides a single source of truth dashboard
+- Ingests raw e-commerce data
+- Processes both small and large-scale datasets efficiently
+- Transforms data into analytics-ready models
+- Produces trusted business KPIs for decision-making
 
 ## Project Overview
-This project demonstrates a complete end-to-end Data Engineering pipeline for an e-commerce platform.  
-The pipeline generates synthetic business data, loads it into a cloud data warehouse, transforms it using modern data modeling practices, orchestrates workflows, and visualizes business KPIs in a dashboard.
+This project simulates a real-world hybrid data pipeline, combining:
 
-The goal of this project is to simulate a real-world analytics pipeline used by data teams to track revenue, product performance, customer activity, and user behavior.
+- Traditional warehouse-based transformations (dbt + Snowflake)
+- Distributed data processing for large datasets (PySpark on AWS Glue)
+
+The pipeline is designed to handle:
+
+- Standard datasets using dbt
+- High-volume datasets (5M+ records) using PySpark
 
 ---
 
 # Architecture
 
-Python Data Generator → Airflow Orchestration → Snowflake Data Warehouse → dbt Transformations → Power BI Dashboard
+AWS S3 (Raw Data - Bronze Layer)
+
+        ├── Branch A (Standard Data)
+        │       ↓
+        │   Snowflake
+        │       ↓
+        │   dbt (Staging → Marts → Metrics)
+        │
+        └── Branch B (Large Orders Dataset - 5M+)
+                ↓
+        AWS Glue (PySpark Processing)
+                ↓
+        AWS S3 (Processed Parquet - Silver Layer)
+                ↓
+        Snowflake (Load Processed Data)
+
+Final Layer:
+        ↓
+dbt (Fact + Metrics Layer - Gold)
+        ↓
+Power BI Dashboard
 
 The warehouse follows a Medallion Architecture:
 
@@ -35,26 +60,35 @@ Gold Layer → Analytics & Business Metrics
 
 # Technologies Used
 
-- Python (Data Generation)
-- SQL
-- Apache Airflow (Pipeline Orchestration)
-- Snowflake (Cloud Data Warehouse)
-- dbt (Data Transformation & Modeling)
-- Power BI (Dashboard Visualization)
+- Python – Data generation
+- AWS S3 – Data lake storage (raw + processed)
+- AWS Glue (PySpark) – Large-scale data processing
+- Snowflake – Cloud data warehouse
+- dbt – Data transformation & modeling
+- Apache Airflow – Workflow orchestration
+- Power BI – Dashboard visualization
+- GitHub Actions – CI/CD for dbt pipelines
+- AWS IAM – Access control
 
 ---
 
-# Phase 1 – Synthetic Data Generation
+# Data Architecture (Medallion Model)
+
+- Bronze Layer → Raw data stored in S3
+- Silver Layer → Processed large datasets using PySpark (Parquet format)
+- Gold Layer → Analytics-ready models in Snowflake via dbt
+
+# Phase 1 – Data Generation
 
 A Python script generates realistic e-commerce datasets.
 
-Datasets generated:
+Synthetic datasets generated using Python:
 
 - Customers – 10,000 records
 - Products – 500 records
-- Orders – 100,000 records
-- Payments – 100,000 records
-- Events – 200,000 records
+- Orders – Incremental (daily batches)
+- Payments – Transaction data
+- Events – User activity (200,000 records)
 
 Events simulate user activity such as:
 
@@ -67,7 +101,7 @@ All datasets are exported as CSV files.
 
 ---
 
-# Phase 2 – Data Loading to Warehouse (Bronze Layer)
+# Phase 2 – Data Loading to Warehouse (Bronze Layer) / Data Ingestion (AWS S3)
 
 The generated CSV files are uploaded to Snowflake stages and loaded into raw warehouse tables.
 
@@ -81,9 +115,16 @@ Bronze layer tables:
 
 These tables store raw ingested data without transformation.
 
+- While using AWS S3, All datasets are uploaded to AWS S3 (raw zone)
+- Acts as centralized storage for pipeline input
+- Organized using structured prefixes:
+  - /raw/customers/
+  - /raw/orders/
+  - /raw/events/
+
 ---
 
-# Phase 3 – Data Cleaning (Silver Layer)
+# Phase 3A – Data Cleaning 
 
 Using dbt staging models, raw data is cleaned and standardized.
 
@@ -105,22 +146,45 @@ Transformations performed:
 
 This prepares the data for analytics modeling.
 
+# Phase 3B – Large Scale Data Processing (PySpark)
+
+A separate processing branch handles high-volume order data (~5M records).
+
+PySpark (AWS Glue) responsibilities:
+- Deduplication at scale
+- Filtering invalid records
+- Data type standardization
+- Partitioning (e.g., by order_date)
+- Conversion to Parquet format for optimized storage
+
+Processed data is written to: 
+S3 → /processed/orders/
+
+# Data Loading to Snowflake
+
+- Processed Parquet data is loaded into Snowflake tables
+- Standard datasets are directly loaded from S3
+
 ---
 
-# Phase 4 – Data Modeling (Gold Layer)
+# Phase 4 – Data Transformation using dbt
 
-The warehouse uses a Star Schema for analytics.
+dbt is used for analytics modeling and business logic using star schema, not heavy processing.
 
-Dimension Tables:
+Layers:
+- Staging Layer
+- Source alignment
+- Light transformations
+- Column standardization
 
+Marts Layer:
 - dim_customers
 - dim_products
-
-Fact Tables:
-
-- fact_orders
-
-This structure supports efficient business analytics queries.
+- fact_orders_small (standard pipeline)
+- fact_orders_large (PySpark processed data)
+  
+Metrics Layer:
+- Unified business metrics
 
 ---
 
@@ -150,6 +214,7 @@ Tests performed:
 
 - Primary key uniqueness
 - Null value checks
+- Referential Integrity
 
 Key columns tested include:
 
@@ -167,6 +232,8 @@ The entire workflow is automated using Apache Airflow.
 
 Airflow DAG stages:
 
+DAG 1 - Standard Pipeline
+
 1. Generate incremental datasets
 2. Upload CSV data to Snowflake
 3. Run dbt staging models
@@ -175,11 +242,39 @@ Airflow DAG stages:
 
 Each DAG run processes incremental data, simulating real production pipelines.
 
+DAG 2 - Large Data Pipeline
+
+1. Upload 5M dataset to S3
+2. Trigger AWS Glue PySpark job
+3. Load processed data to Snowflake
+4. Trigger dbt models for large dataset
+5. Run dbt tests
+
+---
+# Phase 8 - CI/CD Pipeline (dbt)
+
+CI/CD implemented using GitHub Actions:
+
+- Trigger on code push
+- Run dbt run
+- Run dbt test
+
+Ensures:
+
+- Automated validation
+- Consistent deployments
+- Early detection of data issues
+  
 ---
 
-# Phase 8 – KPI Dashboard
+# Phase 9 – KPI Dashboard
 
-A Power BI dashboard was built to visualize business metrics.
+A Power BI dashboard was built to visualize business metrics.KPI dashboards provide insights into:
+
+- Revenue trends
+- Conversion funnel
+- Customer behavior
+- Retention analysis
 
 ### Executive Overview
 
@@ -271,19 +366,22 @@ ecommerce-analytics-platform
 └── README.md
 
 
-# Key Skills Demonstrated
+# Key Design Decisions
 
-- Data Pipeline Design
-- Cloud Data Warehousing
-- SQL Data Modeling
-- Incremental Data Processing
-- Data Quality Testing
-- Workflow Orchestration
-- Business Intelligence Dashboarding
+- PySpark introduced only for high-volume data processing
+- dbt used strictly for analytics modeling and metrics
+- Shared dimension tables ensure data consistency across pipelines
+- Separate pipelines improve scalability and maintainability
 
 ---
 
 # Conclusion
 
-This project demonstrates how modern data engineering pipelines are built using a cloud data stack.  
-It simulates real-world workflows where raw data is transformed into reliable business insights through automated and scalable processes.
+This project demonstrates a scalable hybrid data architecture, combining:
+
+- Distributed processing (PySpark)
+- Cloud storage (AWS S3)
+- Data warehousing (Snowflake)
+- Analytics engineering (dbt)
+
+It reflects how modern data teams handle both standard and large-scale data workloads efficiently.
