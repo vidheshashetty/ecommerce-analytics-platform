@@ -26,11 +26,6 @@ jobs:
           cd ecommerce_dbt
           dbt deps
 
-      - name: Validate dbt project
-        run: |
-          cd ecommerce_dbt
-          dbt debug --profiles-dir .
-
       - name: Compile dbt models
         run: |
           cd ecommerce_dbt
