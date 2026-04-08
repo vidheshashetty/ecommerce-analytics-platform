@@ -8,7 +8,7 @@ WITH source AS (
         product_id,
         amount,
         order_date
-    FROM {{ source('raw', 'orders_large') }}
+    FROM {{ source('raw', 'orders_2') }}
 
 ),
 
