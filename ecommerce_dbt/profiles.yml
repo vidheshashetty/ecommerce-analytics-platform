@@ -1,4 +1,4 @@
-default:
+ecommerce_dbt:
   target: dev
   outputs:
     dev:
