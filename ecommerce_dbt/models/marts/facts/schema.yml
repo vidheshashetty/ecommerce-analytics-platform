@@ -25,3 +25,30 @@ models:
               arguments:
                 to: ref('dim_products')
                 field: product_id
+                
+  - name: fact_orders_large
+    columns:
+      - name: order_id
+        tests:
+          - not_null
+          - unique
+
+      - name: customer_id
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_customers')
+                field: customer_id
+
+      - name: product_id
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_products')
+                field: product_id
+
+      - name: total_amount
+        tests:
+          - not_null  
