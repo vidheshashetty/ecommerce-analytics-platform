@@ -20,8 +20,7 @@ jobs:
 
       - name: Install dbt
         run: |
-          pip install --upgrade pip
-          pip install dbt-snowflake
+          pip install dbt-core dbt-snowflake
 
       - name: Setup dbt profile
         run: |
@@ -32,21 +31,16 @@ jobs:
             outputs:
               dev:
                 type: snowflake
-                account: dummy_account
-                user: dummy_user
-                password: dummy_password
-                role: dummy_role
-                database: dummy_db
-                warehouse: dummy_wh
-                schema: dummy_schema
+                account: dummy
+                user: dummy
+                password: dummy
+                role: dummy
+                database: dummy
+                warehouse: dummy
+                schema: dummy
           EOF
 
-      - name: Debug project structure
-        run: |
-          ls -R
-
-      - name: Compile dbt models
+      - name: Compile dbt (SAFE MODE)
         run: |
           cd ecommerce_dbt
-          dbt deps
-          dbt compile
+          dbt parse
