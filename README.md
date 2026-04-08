@@ -27,6 +27,8 @@ The pipeline is designed to handle:
 
 # Architecture
 
+Data Generation (Python)
+        ↓
 AWS S3 (Raw Data - Bronze Layer)
 
         ├── Branch A (Standard Data)
@@ -37,17 +39,15 @@ AWS S3 (Raw Data - Bronze Layer)
         │
         └── Branch B (Large Orders Dataset - 5M+)
                 ↓
-        AWS Glue (PySpark Processing)
+            AWS Glue (PySpark Processing)
                 ↓
-        AWS S3 (Processed Parquet - Silver Layer)
+            AWS S3 (Processed Parquet - Silver Layer)
                 ↓
-        Snowflake (Load Processed Data)
-
-Final Layer:
-        ↓
-dbt (Fact + Metrics Layer - Gold)
-        ↓
-Power BI Dashboard
+            Snowflake (Load Processed Data)
+                ↓
+            dbt (Fact + Metrics Layer - Gold)
+                ↓
+            Power BI Dashboard
 
 The warehouse follows a Medallion Architecture:
 
@@ -101,7 +101,7 @@ All datasets are exported as CSV files.
 
 ---
 
-# Phase 2 – Data Loading to Warehouse (Bronze Layer) / Data Ingestion (AWS S3)
+# Phase 2 – Data Loading to Warehouse / Data Ingestion - S3
 
 The generated CSV files are uploaded to Snowflake stages and loaded into raw warehouse tables.
 
@@ -118,6 +118,7 @@ These tables store raw ingested data without transformation.
 - While using AWS S3, All datasets are uploaded to AWS S3 (raw zone)
 - Acts as centralized storage for pipeline input
 - Organized using structured prefixes:
+  
   - /raw/customers/
   - /raw/orders/
   - /raw/events/
@@ -158,9 +159,10 @@ PySpark (AWS Glue) responsibilities:
 - Conversion to Parquet format for optimized storage
 
 Processed data is written to: 
+
 S3 → /processed/orders/
 
-# Data Loading to Snowflake
+### Data Loading to Snowflake
 
 - Processed Parquet data is loaded into Snowflake tables
 - Standard datasets are directly loaded from S3
@@ -303,68 +305,6 @@ A Power BI dashboard was built to visualize business metrics.KPI dashboards prov
 These dashboards help business teams track performance and user engagement.
 
 ---
-
-# Project Structure
-
-ecommerce-analytics-platform
-│
-├── dags/
-│   └── ecommerce_pipeline_dag.py
-│
-├── data/
-│   └── raw_data/
-│       ├── app_events.csv
-│       ├── customers.csv
-│       ├── orders.csv
-│       ├── payments.csv
-│       ├── products.csv
-│       │
-│       └── incremental/
-│           └── incremental_data_files.csv
-│
-├── dashboard/
-│   ├── executive_overview.png
-│   ├── conversion_analysis.png
-│   └── customer_behavior.png
-│
-├── diagrams/
-│   ├── architecture_diagram.png
-│   └── dag_flow_diagram.png
-│
-├── scripts/
-│   ├── ecommerce_data.py
-│   ├── ecommerce_incremental_data.py
-│   ├── load_to_snowflake.py
-│   └── upload_to_stage.py
-│
-├── ecommerce_dbt/
-│   ├── dbt_project.yml
-│   │
-│   └── models/
-│       │
-│       ├── staging/
-│       │   ├── stg_customers.sql
-│       │   ├── stg_events.sql
-│       │   ├── stg_orders.sql
-│       │   ├── stg_payments.sql
-│       │   └── stg_products.sql
-│       │
-│       └── marts/
-│           │
-│           ├── dimensions/
-│           │   ├── dim_customers.sql
-│           │   ├── dim_products.sql
-│           │   └── schema.yml
-│           │
-│           ├── facts/
-│           │   ├── fact_orders.sql
-│           │   └── schema.yml
-│           │
-│           └── metrics/
-│               └── daily_business_metrics.sql
-│
-└── README.md
-
 
 # Key Design Decisions
 
