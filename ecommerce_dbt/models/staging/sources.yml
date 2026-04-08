@@ -2,5 +2,10 @@ version: 2
 
 sources:
   - name: raw
+  - database: "ECOMMERCE_DB"
+  - schema: "BRONZE"
     tables:
-      - name: orders_large
+      - name: orders
+      - name: customers
+      - name: products
+      - name: orders_2
